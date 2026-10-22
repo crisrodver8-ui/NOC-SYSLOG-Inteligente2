@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOC Syslog Inteligente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== MENÚ LATERAL ===================== -->
+  <aside class="lateral">
+    <div class="marca">
+      <div class="marca-icono">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2"/><circle cx="12" cy="12" r="2" fill="#fff"/></svg>
+      </div>
+      <div>
+        <div class="marca-titulo">NOC Syslog</div>
+        <div class="marca-sub">Inteligente</div>
+      </div>
+    </div>
+
+    <nav class="menu" id="menu">
+      <div class="menu-grupo">Monitoreo</div>
+      <button data-vista="resumen" class="activo"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Panel general</button>
+      <button data-vista="eventos"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Eventos Syslog</button>
+      <button data-vista="incidentes"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>Incidentes<span class="contador" id="cont-incidentes" hidden></span></button>
+      <button data-vista="acciones"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>Aprobaciones<span class="contador" id="cont-acciones" hidden></span></button>
+      <div class="menu-grupo">Red</div>
+      <button data-vista="inventario"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="6" rx="1"/><rect x="2" y="14" width="20" height="6" rx="1"/><path d="M6 7h.01M6 17h.01"/></svg>Inventario</button>
+      <button data-vista="configuraciones"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Configuraciones</button>
+      <button data-vista="consola"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l3 3-3 3M12 15h5"/></svg>Consola</button>
+      <div class="menu-grupo">Seguridad</div>
+      <button data-vista="politica"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>Política IA</button>
+      <button data-vista="auditoria"><svg viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v15H5V6h3l1-2z"/><path d="M9 12h6M9 16h4"/></svg>Auditoría</button>
+    </nav>
+
+    <div class="lateral-pie">
+      <div class="receptor"><span class="punto" id="receptor-punto"></span><span id="receptor-texto">Receptor…</span></div>
+      <span class="etiqueta-sim">v{{ version }} · DATOS SIMULADOS</span>
+    </div>
+  </aside>
+
+  <!-- ===================== ÁREA PRINCIPAL ===================== -->
+  <main class="principal">
+    <header class="barra">
+      <div>
+        <h1 id="titulo-vista">Panel general</h1>
+        <p id="subtitulo-vista">Estado de la red en las últimas 24 horas</p>
+      </div>
+      <div class="barra-der">
+        <span class="reloj" id="reloj"></span>
+        <div class="usuario">
+          <select id="selector-usuario" aria-label="Usuario"></select>
+          <span class="rol" id="rol-usuario"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="contenido">
+
+      <!-- ---------- PANEL GENERAL ---------- -->
+      <section class="vista activa" id="vista-resumen">
+        <div class="kpis" id="kpis"></div>
+        <div class="rejilla r-3-2">
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Actividad de las últimas 12 horas</h2><span class="nota">eventos por hora</span></div>
+            <div class="tarjeta-cuerpo"><div class="columnas" id="grafico-horas"></div></div>
+          </div>
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Distribución por severidad</h2><span class="nota">24 h</span></div>
+            <div class="tarjeta-cuerpo">
+              <div class="apilada" id="barra-sev"></div>
+              <div class="leyenda-sev" id="leyenda-sev"></div>
+            </div>
+          </div>
+        </div>
+        <div class="rejilla r-2 mt">
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Salud de los equipos</h2><span class="nota">verde OK · ámbar sospechoso · rojo crítico · gris inactivo</span></div>
+            <ul class="lista" id="lista-equipos"></ul>
+          </div>
+          <div>
+            <div class="tarjeta">
+              <div class="tarjeta-cab"><h2>Alertas recientes</h2><span class="nota">severidad 0-3 o sospechosos</span></div>
+              <ul class="lista" id="lista-alertas"></ul>
+            </div>
+            <div class="tarjeta mt">
+              <div class="tarjeta-cab"><h2>Incidentes activos</h2><button class="btn btn-chico" data-ir="incidentes">Ver todos</button></div>
+              <ul class="lista" id="lista-incidentes-res"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- EVENTOS ---------- -->
+      <section class="vista" id="vista-eventos">
+        <div class="tarjeta">
+          <div class="tarjeta-cab">
+            <h2>Eventos recibidos</h2>
+            <div class="acciones-fila">
+              <label class="btn" for="archivo-syslog">Importar archivo .log</label>
+              <input type="file" id="archivo-syslog" accept=".log,.txt" hidden>
+              <select class="btn" id="escenario-sim" aria-label="Escenario de simulación">
+                <option value="normal">Simular: tráfico normal</option>
+                <option value="ataque_ia">Simular: ataque de agente IA</option>
+                <option value="tormenta">Simular: tormenta de eventos</option>
+              </select>
+              <button class="btn btn-primario" id="btn-simular">Generar</button>
+            </div>
+          </div>
+          <form class="filtros" id="form-filtros">
+            <div class="campo"><label>Desde</label><input type="date" name="desde"></div>
+            <div class="campo"><label>Hasta</label><input type="date" name="hasta"></div>
+            <div class="campo"><label>Marca</label>
+              <select name="marca"><option value="">Todas</option><option>Cisco</option><option>Fortinet</option><option>Huawei</option><option>Otro</option></select></div>
+            <div class="campo"><label>Equipo</label><select name="dispositivo_id" id="filtro-equipo"><option value="">Todos</option></select></div>
+            <div class="campo"><label>Severidad</label><select name="severidad" id="filtro-sev"><option value="">Todas</option></select></div>
+            <div class="campo"><label>Texto</label><input type="search" name="texto" placeholder="mensaje, host o IP"></div>
+            <label class="casilla"><input type="checkbox" name="sospechoso" value="1"> Solo sospechosos</label>
+            <button class="btn btn-primario" type="submit">Filtrar</button>
+            <button class="btn" type="reset">Limpiar</button>
+          </form>
+          <div class="tabla-envoltura">
+            <table>
+              <thead><tr><th>#</th><th>Recibido</th><th>Severidad</th><th>Equipo</th><th>Marca</th><th>Facility</th><th>Mensaje</th><th>Rep.</th><th>Política</th></tr></thead>
+              <tbody id="tabla-eventos"></tbody>
+            </table>
+          </div>
+          <div class="paginacion">
+            <span id="info-paginacion"></span>
+            <div class="acciones-fila"><button class="btn btn-chico" id="pag-ant">‹ Anterior</button><button class="btn btn-chico" id="pag-sig">Siguiente ›</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- INCIDENTES ---------- -->
+      <section class="vista" id="vista-incidentes">
+        <div class="tarjeta">
+          <div class="tarjeta-cab">
+            <h2>Incidentes</h2>
+            <div class="acciones-fila">
+              <select class="btn" id="filtro-incidentes" aria-label="Filtrar por estado">
+                <option value="activos">Activos</option><option value="">Todos</option>
+                <option value="abierto">Abiertos</option><option value="en_progreso">En progreso</option>
+                <option value="resuelto">Resueltos</option><option value="cerrado">Cerrados</option>
+              </select>
+              <button class="btn btn-primario" id="btn-nuevo-incidente">+ Nuevo incidente</button>
+            </div>
+          </div>
+          <div class="tabla-envoltura">
+            <table>
+              <thead><tr><th>#</th><th>Título</th><th>Severidad</th><th>Estado</th><th>Asignado a</th><th>Equipo</th><th>Actualizado</th></tr></thead>
+              <tbody id="tabla-incidentes"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- APROBACIONES ---------- -->
+      <section class="vista" id="vista-acciones">
+        <div class="aviso info">Flujo obligatorio: evento → validación → propuesta → revisión humana → aprobación → ejecución autorizada → verificación → auditoría. Quien propone no puede aprobar. En v0.2.0 la ejecución es <b>simulada</b>.</div>
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><h2>Acciones de respuesta</h2><button class="btn btn-primario" id="btn-nueva-accion">+ Proponer acción</button></div>
+          <div id="lista-acciones"></div>
+        </div>
+      </section>
+
+      <!-- ---------- INVENTARIO ---------- -->
+      <section class="vista" id="vista-inventario">
+        <div class="tarjeta">
+          <div class="tarjeta-cab">
+            <h2>Inventario de equipos</h2>
+            <button class="btn btn-primario" id="btn-nuevo-equipo">+ Agregar equipo</button>
+          </div>
+          <div class="tabla-envoltura">
+            <table>
+              <thead><tr><th>Nombre</th><th>IP</th><th>Marca</th><th>Modelo</th><th>Versión</th><th>Ubicación</th><th>Estado</th><th>Lista permitida</th><th>Actualizado</th><th></th></tr></thead>
+              <tbody id="tabla-inventario"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- CONFIGURACIONES ---------- -->
+      <section class="vista" id="vista-configuraciones">
+        <div class="rejilla r-2-3">
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Parámetros</h2></div>
+            <form class="tarjeta-cuerpo form" id="form-config">
+              <div class="campo completo"><label>Fabricante</label>
+                <select name="marca"><option>Cisco</option><option>Fortinet</option><option>Huawei</option></select></div>
+              <div class="campo"><label>IP del servidor Syslog (NOC)</label><input name="servidor" value="198.51.100.200" required></div>
+              <div class="campo"><label>Puerto</label><input name="puerto" type="number" value="514" min="1" max="65535"></div>
+              <div class="campo"><label>Protocolo</label><select name="protocolo"><option value="udp">UDP</option><option value="tcp">TCP</option></select></div>
+              <div class="campo"><label>Severidad máxima enviada</label><select name="nivel" id="config-nivel"></select></div>
+              <div class="campo"><label>Facility</label><select name="facility" id="config-facility"></select></div>
+              <div class="campo"><label>Servidor NTP</label><input name="ntp" value="198.51.100.123" required></div>
+              <div class="campo"><label>Interfaz / IP de origen</label><input name="interfaz" placeholder="Loopback0"></div>
+              <div class="campo"><label>Zona horaria</label><input name="zona" value="COT"></div>
+              <div class="completo"><button class="btn btn-primario" type="submit">Generar configuración</button></div>
+              <p class="error-form completo" id="error-config" hidden></p>
+            </form>
+          </div>
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2 id="titulo-config">Configuración generada</h2><button class="btn btn-chico" id="btn-copiar">Copiar</button></div>
+            <pre class="codigo" id="salida-config">Completa los parámetros y pulsa «Generar configuración».</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- CONSOLA ---------- -->
+      <section class="vista" id="vista-consola">
+        <div class="aviso info">Consola <b>simulada de solo lectura</b>. No se conecta a los equipos. Solo acepta comandos de consulta de la lista permitida; todo intento queda en la auditoría.</div>
+        <div class="rejilla r-3-2">
+          <div class="terminal">
+            <div class="terminal-cab">Equipo: <select id="consola-equipo"></select><span id="consola-info"></span></div>
+            <div class="terminal-salida" id="consola-salida"></div>
+            <form class="terminal-entrada" id="form-consola">
+              <span id="consola-prompt">#</span>
+              <input id="consola-comando" autocomplete="off" spellcheck="false" placeholder="escribe un comando y Enter">
+            </form>
+          </div>
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Comandos permitidos</h2><span class="nota">clic para usar</span></div>
+            <div class="tarjeta-cuerpo">
+              <div class="comandos-ok" id="consola-permitidos"></div>
+              <div class="seccion-titulo">Siempre bloqueados (ejemplos)</div>
+              <p class="comandos-bloq">configure terminal · system-view · config system … · reload · reboot · write erase · erase · delete · format · no … · undo … · shutdown · copy · debug · execute … · ; | && `</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- POLÍTICA IA ---------- -->
+      <section class="vista" id="vista-politica">
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><h2>Flujo seguro obligatorio</h2></div>
+          <div class="tarjeta-cuerpo flujo-grande" id="flujo-politica"></div>
+        </div>
+        <div class="rejilla r-2 mt">
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Reglas activas</h2><span class="nota">Política de defensa frente a agentes de IA</span></div>
+            <div class="tarjeta-cuerpo" id="reglas-politica"></div>
+          </div>
+          <div>
+            <div class="tarjeta">
+              <div class="tarjeta-cab"><h2>Detecciones</h2><span class="nota">eventos marcados por cada regla</span></div>
+              <div class="tarjeta-cuerpo"><div class="contadores" id="contadores-politica"></div></div>
+            </div>
+            <div class="tarjeta mt">
+              <div class="tarjeta-cab"><h2>Parámetros configurados</h2><span class="nota">archivo .env</span></div>
+              <div class="tarjeta-cuerpo"><dl class="dl" id="parametros-politica"></dl></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- AUDITORÍA ---------- -->
+      <section class="vista" id="vista-auditoria">
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><h2>Registro de auditoría</h2><span class="nota">últimas 200 acciones · visible para supervisor y auditor</span></div>
+          <div class="tabla-envoltura">
+            <table>
+              <thead><tr><th>#</th><th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Objeto</th><th>Detalle</th></tr></thead>
+              <tbody id="tabla-auditoria"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="{{ url_for('static', filename='js/comun.js') }}"></script>
+<script src="{{ url_for('static', filename='js/resumen.js') }}"></script>
+<script src="{{ url_for('static', filename='js/eventos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/incidentes.js') }}"></script>
+<script src="{{ url_for('static', filename='js/acciones.js') }}"></script>
+<script src="{{ url_for('static', filename='js/inventario.js') }}"></script>
+<script src="{{ url_for('static', filename='js/herramientas.js') }}"></script>
+<script src="{{ url_for('static', filename='js/principal.js') }}"></script>
+</body>
+</html>
