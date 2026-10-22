@@ -1,0 +1,4 @@
+# Dependencias del proyecto NOC Syslog Inteligente (v0.2.0)
+Flask>=3.0,<4.0        # Framework web (API REST + servir la interfaz)
+python-dotenv>=1.0     # Lee variables de entorno desde el archivo .env
+pytest>=8.0            # Pruebas automáticas
