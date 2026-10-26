@@ -1,0 +1,6 @@
+# Dependencias del proyecto NOC Syslog Inteligente (v1.0.0)
+Flask>=3.0,<4.0        # Framework web (API REST + interfaz)
+python-dotenv>=1.0     # Lee variables de entorno desde el archivo .env
+waitress>=3.0          # Servidor WSGI de producción (funciona en Windows)
+paramiko>=3.4          # Cliente SSH para el gestor de equipos
+pytest>=8.0            # Pruebas automáticas
