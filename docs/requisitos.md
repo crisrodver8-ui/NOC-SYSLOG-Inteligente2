@@ -75,3 +75,56 @@ Desarrollar un MVP de NOC que reciba, clasifique y gestione eventos Syslog de eq
 
 **HU08 – Defensa IA.** Como *supervisor* quiero que los eventos sospechosos de un agente de IA se marquen y que ninguna acción se ejecute sin mi aprobación.
 *Criterios:* (1) un log con "ignore previous instructions" se marca como posible inyección; (2) quien propone no puede aprobar; (3) no se ejecuta nada sin aprobación.
+
+---
+
+# Requisitos agregados en v1.0.0 (Corte 3)
+
+## Requisitos funcionales
+
+| ID | Requisito | Origen | Prioridad |
+|----|-----------|--------|-----------|
+| RF11 | Inicio de sesión con usuario y clave; el admin crea usuarios con roles | Hallazgo H4 | Alta |
+| RF12 | Clave temporal para nuevos usuarios (incluido el auditor), con cambio obligatorio | Hallazgo H6 | Alta |
+| RF13 | API REST con tokens por usuario, vencimiento y revocación | Hallazgo H5 | Alta |
+| RF14 | Fechas no modificables y auditoría a prueba de alteraciones | Hallazgo H1 | Alta |
+| RF15 | Registrar el puerto de consola (serial COM o telnet GNS3) de cada equipo | Hallazgo H2 | Alta |
+| RF16 | Registrar los puertos físicos con estado, IP, VLAN y «conectado a»; estado desde Syslog | Hallazgo H3 | Alta |
+| RF17 | Gestor SSH/consola desde el backend con roles, lista de hosts y lista de comandos | Corte 3 | Alta |
+| RF18 | Ejecución real de acciones aprobadas | Corte 3 | Alta |
+| RF19 | Alertas por Telegram sin exponer el token | Corte 3 | Alta |
+| RF20 | Verificación de políticas Syslog por equipo | Corte 3 | Media |
+| RF21 | Respaldo y restauración verificados | Corte 3 | Alta |
+
+## Requisitos no funcionales
+
+| ID | Requisito |
+|----|-----------|
+| RNF07 | Claves con hash; bloqueo tras 5 intentos; sesión de 8 h; protección CSRF |
+| RNF08 | Credenciales de equipos y token de Telegram solo en `.env` |
+| RNF09 | Ingesta ≥ 100 mensajes/s con 0 % de pérdida a 400 msg/s (UDP local) |
+| RNF10 | Migración automática desde v0.2.0 y rollback posible |
+| RNF11 | Servidor WSGI de producción (waitress) |
+
+## Historias de usuario nuevas
+
+**HU09 – Usuarios.** Como *administrador* quiero crear cuentas con rol y clave temporal para que cada persona entre con su propia identidad.
+*Criterios:* (1) la clave temporal se muestra una vez; (2) el usuario debe cambiarla al entrar; (3) 5 intentos fallidos bloquean la cuenta.
+
+**HU10 – Auditor.** Como *auditor* quiero una cuenta de solo lectura con mi propia clave para revisar la auditoría y su integridad.
+*Criterios:* (1) no puede modificar nada; (2) puede verificar la cadena de hashes.
+
+**HU11 – Fechas confiables.** Como *auditor* quiero que nadie pueda cambiar la fecha de un evento o de la auditoría.
+*Criterios:* (1) la BD rechaza el cambio; (2) si alguien altera la auditoría por fuera, la verificación lo detecta.
+
+**HU12 – Consola y puertos.** Como *operador* quiero ver por qué puerto de consola y con qué parámetros me conecto a cada equipo, y el estado de sus puertos físicos.
+*Criterios:* (1) se muestra el COM/telnet y 9600 8N1; (2) un `LINK-3-UPDOWN` cambia el estado del puerto.
+
+**HU13 – Gestor real.** Como *operador* quiero consultar los equipos del laboratorio sin salir del NOC.
+*Criterios:* (1) `show` permitido responde con la salida real; (2) `configure terminal` se bloquea; (3) las credenciales no se muestran.
+
+**HU14 – API.** Como *integrador* quiero consultar eventos e incidentes desde un script con un token.
+*Criterios:* (1) el token tiene los permisos del rol; (2) al revocarlo deja de funcionar.
+
+**HU15 – Alertas.** Como *supervisor* quiero recibir en Telegram los eventos graves y los incidentes nuevos.
+*Criterios:* (1) severidad 0-2 o riesgo ≥ 60; (2) sin inundar el chat; (3) el token no aparece en la interfaz.
