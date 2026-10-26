@@ -9,7 +9,27 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
 <body>
-<div class="app">
+<!-- ===================== ACCESO (login, configuración inicial, cambio de clave) ===================== -->
+<div class="acceso" id="acceso" hidden>
+  <form class="acceso-caja" id="form-acceso" autocomplete="on">
+    <div class="acceso-marca">
+      <div class="marca-icono"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M19.1 4.9a10 10 0 0 1 0 14.2"/><circle cx="12" cy="12" r="2" fill="#fff"/></svg></div>
+      <div><div class="acceso-titulo">NOC Syslog Inteligente</div><div class="acceso-sub">v{{ version }}</div></div>
+    </div>
+    <h2 id="acceso-titulo">Iniciar sesión</h2>
+    <p class="acceso-texto" id="acceso-texto"></p>
+    <div class="campo" id="campo-usuario"><label for="acc-usuario">Usuario</label><input id="acc-usuario" name="usuario" autocomplete="username" required></div>
+    <div class="campo" id="campo-nombre" hidden><label for="acc-nombre">Nombre completo</label><input id="acc-nombre" name="nombre"></div>
+    <div class="campo" id="campo-actual" hidden><label for="acc-actual">Clave actual (temporal)</label><input id="acc-actual" name="actual" type="password" autocomplete="current-password"></div>
+    <div class="campo"><label for="acc-clave" id="etq-clave">Clave</label><input id="acc-clave" name="clave" type="password" autocomplete="current-password" required></div>
+    <div class="campo" id="campo-repetir" hidden><label for="acc-repetir">Repite la clave</label><input id="acc-repetir" name="repetir" type="password" autocomplete="new-password"></div>
+    <p class="acceso-ayuda" id="acceso-ayuda" hidden>Mínimo 10 caracteres, con letras y números, sin incluir el usuario.</p>
+    <p class="error-form" id="acceso-error" hidden></p>
+    <button class="btn btn-primario btn-ancho" id="acceso-boton">Entrar</button>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
 
   <!-- ===================== MENÚ LATERAL ===================== -->
   <aside class="lateral">
@@ -35,12 +55,16 @@
       <button data-vista="consola"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l3 3-3 3M12 15h5"/></svg>Consola</button>
       <div class="menu-grupo">Seguridad</div>
       <button data-vista="politica"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>Política IA</button>
+      <button data-vista="verificacion"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Verificación</button>
       <button data-vista="auditoria"><svg viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v15H5V6h3l1-2z"/><path d="M9 12h6M9 16h4"/></svg>Auditoría</button>
+      <div class="menu-grupo">Administración</div>
+      <button data-vista="usuarios" data-rol="admin"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M17 11l2 2 4-4"/></svg>Usuarios</button>
+      <button data-vista="api"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="16" r="3"/></svg>API</button>
     </nav>
 
     <div class="lateral-pie">
       <div class="receptor"><span class="punto" id="receptor-punto"></span><span id="receptor-texto">Receptor…</span></div>
-      <span class="etiqueta-sim">v{{ version }} · DATOS SIMULADOS</span>
+      <span class="etiqueta-sim">v{{ version }} · LABORATORIO</span>
     </div>
   </aside>
 
@@ -54,8 +78,10 @@
       <div class="barra-der">
         <span class="reloj" id="reloj"></span>
         <div class="usuario">
-          <select id="selector-usuario" aria-label="Usuario"></select>
+          <span class="usuario-nombre" id="nombre-usuario"></span>
           <span class="rol" id="rol-usuario"></span>
+          <button class="btn btn-chico" id="btn-mi-clave" title="Cambiar mi clave">Clave</button>
+          <button class="btn btn-chico" id="btn-salir">Salir</button>
         </div>
       </div>
     </header>
@@ -120,13 +146,14 @@
             <div class="campo"><label>Equipo</label><select name="dispositivo_id" id="filtro-equipo"><option value="">Todos</option></select></div>
             <div class="campo"><label>Severidad</label><select name="severidad" id="filtro-sev"><option value="">Todas</option></select></div>
             <div class="campo"><label>Texto</label><input type="search" name="texto" placeholder="mensaje, host o IP"></div>
+            <div class="campo"><label>Riesgo</label><select name="riesgo_min"><option value="">Todos</option><option value="30">≥ 30 (medio)</option><option value="60">≥ 60 (alto)</option></select></div>
             <label class="casilla"><input type="checkbox" name="sospechoso" value="1"> Solo sospechosos</label>
             <button class="btn btn-primario" type="submit">Filtrar</button>
             <button class="btn" type="reset">Limpiar</button>
           </form>
           <div class="tabla-envoltura">
             <table>
-              <thead><tr><th>#</th><th>Recibido</th><th>Severidad</th><th>Equipo</th><th>Marca</th><th>Facility</th><th>Mensaje</th><th>Rep.</th><th>Política</th></tr></thead>
+              <thead><tr><th>#</th><th>Recibido</th><th>Severidad</th><th>Equipo</th><th>Marca</th><th>Facility</th><th>Mensaje</th><th>Rep.</th><th>Riesgo</th><th>Política</th></tr></thead>
               <tbody id="tabla-eventos"></tbody>
             </table>
           </div>
@@ -178,7 +205,7 @@
           </div>
           <div class="tabla-envoltura">
             <table>
-              <thead><tr><th>Nombre</th><th>IP</th><th>Marca</th><th>Modelo</th><th>Versión</th><th>Ubicación</th><th>Estado</th><th>Lista permitida</th><th>Actualizado</th><th></th></tr></thead>
+              <thead><tr><th>Nombre</th><th>IP</th><th>Marca</th><th>Modelo / versión</th><th>Ubicación</th><th>Estado</th><th>Consola</th><th>Gestión</th><th>Puertos</th><th>Lista permitida</th><th>Actualizado</th></tr></thead>
               <tbody id="tabla-inventario"></tbody>
             </table>
           </div>
@@ -214,7 +241,7 @@
 
       <!-- ---------- CONSOLA ---------- -->
       <section class="vista" id="vista-consola">
-        <div class="aviso info">Consola <b>simulada de solo lectura</b>. No se conecta a los equipos. Solo acepta comandos de consulta de la lista permitida; todo intento queda en la auditoría.</div>
+        <div class="aviso info">Consola de <b>solo lectura</b>. En equipos <b>simulados</b> responde con datos de ejemplo; en equipos <b>reales</b> (GNS3/laboratorio) se conecta desde el servidor por SSH o por la consola telnet. Solo acepta comandos de la lista permitida y todo intento queda en la auditoría. Los cambios solo se hacen por <b>Aprobaciones</b>.</div>
         <div class="rejilla r-3-2">
           <div class="terminal">
             <div class="terminal-cab">Equipo: <select id="consola-equipo"></select><span id="consola-info"></span></div>
@@ -259,6 +286,57 @@
         </div>
       </section>
 
+      <!-- ---------- VERIFICACIÓN ---------- -->
+      <section class="vista" id="vista-verificacion">
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><h2>Controles del sistema</h2>
+            <div class="acciones-fila"><button class="btn btn-chico" id="btn-verificar-ntp">Verificar hora NTP ahora</button>
+              <button class="btn btn-chico" id="btn-integridad">Verificar integridad</button></div></div>
+          <div class="tarjeta-cuerpo"><div class="controles" id="controles-globales"></div></div>
+        </div>
+        <div class="tarjeta mt">
+          <div class="tarjeta-cab"><h2>Políticas Syslog por equipo</h2><span class="nota">verde cumple · ámbar revisar · rojo no cumple · gris sin datos</span></div>
+          <div class="tabla-envoltura"><table><thead id="cab-verificacion"></thead><tbody id="tabla-verificacion"></tbody></table></div>
+        </div>
+        <div class="tarjeta mt">
+          <div class="tarjeta-cab"><h2>Alertas por Telegram</h2><button class="btn btn-chico" id="btn-telegram-prueba" data-rol="admin">Enviar prueba</button></div>
+          <div class="tarjeta-cuerpo" id="estado-telegram"></div>
+        </div>
+      </section>
+
+      <!-- ---------- USUARIOS ---------- -->
+      <section class="vista" id="vista-usuarios">
+        <div class="aviso info">Cada usuario recibe una <b>clave temporal</b> que solo se muestra una vez y debe cambiar en su primer ingreso. Así el administrador nunca conoce la clave definitiva (por ejemplo, la del auditor).</div>
+        <div class="tarjeta">
+          <div class="tarjeta-cab"><h2>Usuarios</h2><button class="btn btn-primario" id="btn-nuevo-usuario">+ Crear usuario</button></div>
+          <div class="tabla-envoltura"><table>
+            <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th>Creado</th><th></th></tr></thead>
+            <tbody id="tabla-usuarios"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ---------- API ---------- -->
+      <section class="vista" id="vista-api">
+        <div class="rejilla r-2-3">
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Mis tokens</h2><button class="btn btn-primario btn-chico" id="btn-nuevo-token">+ Nuevo token</button></div>
+            <ul class="lista" id="lista-tokens"></ul>
+          </div>
+          <div class="tarjeta">
+            <div class="tarjeta-cab"><h2>Cómo usar la API</h2></div>
+            <div class="tarjeta-cuerpo">
+              <p>Envía el token en la cabecera <code>Authorization</code>. El token tiene los mismos permisos que tu rol.</p>
+              <pre class="comando" id="ejemplo-api"></pre>
+              <p class="kpi-pie">Documentación completa en <code>docs/API.md</code>. El índice de rutas está en <code>/api/</code>.</p>
+            </div>
+          </div>
+        </div>
+        <div class="tarjeta mt">
+          <div class="tarjeta-cab"><h2>Rutas disponibles</h2><span class="nota" id="nota-rutas"></span></div>
+          <div class="tabla-envoltura"><table><thead><tr><th>Método</th><th>Ruta</th><th>Descripción</th></tr></thead><tbody id="tabla-rutas"></tbody></table></div>
+        </div>
+      </section>
+
       <!-- ---------- AUDITORÍA ---------- -->
       <section class="vista" id="vista-auditoria">
         <div class="tarjeta">
@@ -285,6 +363,8 @@
 <script src="{{ url_for('static', filename='js/acciones.js') }}"></script>
 <script src="{{ url_for('static', filename='js/inventario.js') }}"></script>
 <script src="{{ url_for('static', filename='js/herramientas.js') }}"></script>
+<script src="{{ url_for('static', filename='js/administracion.js') }}"></script>
+<script src="{{ url_for('static', filename='js/acceso.js') }}"></script>
 <script src="{{ url_for('static', filename='js/principal.js') }}"></script>
 </body>
 </html>

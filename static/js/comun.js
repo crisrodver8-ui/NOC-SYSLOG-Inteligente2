@@ -7,9 +7,9 @@
    y nunca se ejecuta.
    ===================================================================== */
 const NOC = {
-  usuario: null,
-  rol: null,
-  usuarios: {},
+  usuario: null,       // nombre de usuario de la sesión
+  rol: null,           // admin | supervisor | operador | auditor
+  usuarios: [],        // [{usuario, nombre, rol}] para asignar incidentes
   dispositivos: [],
   SEVERIDADES: ["Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug"],
   ESTADOS_INC: { abierto: "Abierto", en_progreso: "En progreso", resuelto: "Resuelto", cerrado: "Cerrado" },
@@ -21,9 +21,12 @@ function esc(valor) {
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-/** Llamada a la API. Envía el usuario actual en la cabecera X-Usuario. */
+/**
+ * Llamada a la API con la sesión del navegador (cookie).
+ * La cabecera X-NOC protege contra CSRF: otro sitio web no puede agregarla.
+ */
 async function api(ruta, { metodo = "GET", datos, formulario } = {}) {
-  const opciones = { method: metodo, headers: { "X-Usuario": NOC.usuario || "" } };
+  const opciones = { method: metodo, headers: { "X-NOC": "1" }, credentials: "same-origin" };
   if (formulario) {
     opciones.body = formulario;
   } else if (datos !== undefined) {
@@ -32,6 +35,10 @@ async function api(ruta, { metodo = "GET", datos, formulario } = {}) {
   }
   const resp = await fetch("/api" + ruta, opciones);
   const json = await resp.json().catch(() => ({}));
+  if (resp.status === 401 && !ruta.startsWith("/sesion")) {
+    mostrarAcceso();              // la sesión venció: se vuelve a pedir usuario y clave
+    throw new Error("Tu sesión terminó. Vuelve a iniciar sesión.");
+  }
   if (!resp.ok) throw new Error(json.error || `Error ${resp.status}`);
   return json;
 }
@@ -53,6 +60,12 @@ function chipEstado(estado, texto) {
 }
 
 const BANDERAS_INFO = new Set(["acceso", "cambio_config", "fallo_autenticacion"]);
+
+function chipRiesgo(n) {
+  const r = Number(n) || 0;
+  const nivel = r >= 60 ? "alto" : r >= 30 ? "medio" : "bajo";
+  return `<span class="riesgo r-${nivel}" title="Riesgo ${r}/100">${r}</span>`;
+}
 function chipsBanderas(cadena) {
   if (!cadena) return "";
   return `<span class="chips">${cadena.split(",").map((b) =>
@@ -67,12 +80,25 @@ function aviso(texto, tipo = "") {
   setTimeout(() => t.remove(), 4500);
 }
 
-function puede(...roles) { return roles.includes(NOC.rol); }
+// Igual que en el backend: el admin puede todo lo del supervisor y del operador, etc.
+const JERARQUIA = {
+  admin: ["admin", "supervisor", "operador", "auditor"],
+  supervisor: ["supervisor", "operador"],
+  operador: ["operador"],
+  auditor: ["auditor"],
+};
+function puede(...roles) { return (JERARQUIA[NOC.rol] || []).some((r) => roles.includes(r)); }
 
 function opcionesUsuarios(seleccionado = "") {
-  return `<option value="">— Sin asignar —</option>` + Object.entries(NOC.usuarios)
-    .filter(([, rol]) => rol !== "auditor")
-    .map(([u, rol]) => `<option value="${esc(u)}" ${u === seleccionado ? "selected" : ""}>${esc(u)} (${esc(rol)})</option>`).join("");
+  return `<option value="">— Sin asignar —</option>` + NOC.usuarios
+    .filter((u) => u.rol !== "auditor")
+    .map((u) => `<option value="${esc(u.usuario)}" ${u.usuario === seleccionado ? "selected" : ""}>${esc(u.usuario)} (${esc(u.rol)})</option>`).join("");
+}
+
+/** Copia texto al portapapeles con aviso. */
+async function copiar(texto) {
+  try { await navigator.clipboard.writeText(texto); aviso("Copiado al portapapeles"); }
+  catch { aviso("No se pudo copiar; selecciónalo manualmente.", "error"); }
 }
 
 function opcionesEquipos(seleccionado = "", soloAutorizados = false) {

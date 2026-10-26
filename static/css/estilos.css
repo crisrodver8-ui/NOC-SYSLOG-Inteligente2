@@ -151,7 +151,7 @@ td { padding: 10px 14px; border-bottom: 1px solid #eef1f5; vertical-align: top; 
 tr.clic { cursor: pointer; }
 tr.clic:hover td { background: #f6fafa; }
 tr.sospechosa td:first-child { box-shadow: inset 3px 0 0 var(--violeta); }
-.msg { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+.msg { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
 .vacio { padding: 34px; text-align: center; color: var(--texto-tenue); }
 .paginacion { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; color: var(--texto-suave); font-size: 13.5px; }
 
@@ -301,4 +301,80 @@ pre.codigo .com { color: #7fa6a3; }
   .lista .der { white-space: normal; }
   .barra-der { flex-wrap: wrap; }
   .dl { grid-template-columns: 1fr; }
+}
+
+/* =====================================================================
+   v1.0.0 - acceso, verificación, API, puertos y riesgo
+   ===================================================================== */
+/* Pantalla de acceso */
+.acceso { min-height: 100vh; display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(circle at 20% 10%, #1d3a63 0, var(--lateral) 55%); }
+.acceso-caja { width: min(400px, 100%); background: var(--superficie); border-radius: 14px; padding: 28px 28px 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35); display: flex; flex-direction: column; gap: 14px; }
+.acceso-marca { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.acceso-titulo { font-weight: 700; font-size: 16px; }
+.acceso-sub { color: var(--texto-tenue); font-size: 12.5px; }
+.acceso-caja h2 { margin: 6px 0 0; font-size: 20px; }
+.acceso-texto { margin: -6px 0 2px; color: var(--texto-suave); font-size: 14px; }
+.acceso-ayuda { margin: -4px 0 0; color: var(--texto-tenue); font-size: 12.5px; }
+.btn-ancho { width: 100%; justify-content: center; padding: 10px; }
+.usuario-nombre { font-weight: 600; white-space: nowrap; }
+
+/* Riesgo */
+.riesgo { display: inline-block; min-width: 30px; text-align: center; padding: 2px 6px; border-radius: 5px; font-size: 12px;
+  font-weight: 700; font-variant-numeric: tabular-nums; }
+.r-bajo { background: var(--neutro-suave); color: var(--neutro); }
+.r-medio { background: var(--alerta-suave); color: var(--alerta); }
+.r-alto { background: var(--peligro); color: #fff; }
+
+/* Verificación */
+.controles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.control { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie-2); }
+.control-estado { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px;
+  font-weight: 700; color: #fff; flex: none; vertical-align: middle; }
+.e-ok { background: var(--exito); }
+.e-advertencia { background: #d68a0c; }
+.e-fallo { background: var(--peligro); }
+.e-sin_datos { background: #b4bdc9; }
+
+/* API */
+.metodo { font-family: var(--mono); font-size: 11.5px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.m-get { background: var(--primario-suave); color: var(--primario-oscuro); }
+.m-post { background: #e4ecfb; color: #2b5cb8; }
+.m-put, .m-patch { background: var(--alerta-suave); color: var(--alerta); }
+.m-delete { background: var(--peligro-suave); color: var(--peligro); }
+.clave-temporal { font-size: 16px; letter-spacing: .05em; user-select: all; word-break: break-all; }
+
+/* Acceso de administración del equipo */
+.accesos { display: grid; gap: 10px; }
+.acceso-item { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie-2); }
+.acceso-item .sub { font-size: 13.5px; color: var(--texto-suave); margin-top: 2px; }
+.acceso-icono { width: 34px; height: 34px; border-radius: 8px; background: var(--primario-suave); color: var(--primario); display: grid; place-items: center; flex: none; }
+.acceso-icono svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Frente del equipo: puertos físicos */
+.frente { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; padding: 12px;
+  background: #27303d; border-radius: 8px; border: 3px solid #1b222c; }
+.puerto { border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.puerto-boca { width: 28px; height: 22px; border-radius: 3px 3px 6px 6px; background: #11161d; position: relative;
+  box-shadow: inset 0 0 0 2px #46505e; }
+.puerto-boca::after { content: ""; position: absolute; left: 4px; top: 4px; width: 6px; height: 4px; border-radius: 1px; background: var(--color-led, #6b7789); }
+.puerto.t-fibra .puerto-boca { border-radius: 3px; box-shadow: inset 0 0 0 2px #4a7fe0; }
+.puerto-num { font-family: var(--mono); font-size: 10px; color: #b7c2d0; }
+.puerto:hover .puerto-boca { box-shadow: inset 0 0 0 2px #5fd4c8; }
+.p-up { --color-led: #3ccf7a; }
+.p-down { --color-led: #f06a5d; }
+.p-admin_down { --color-led: #f0b429; }
+.p-desconocido { --color-led: #6b7789; }
+.leyenda-puertos { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--texto-suave); }
+.leyenda-puertos i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; background: var(--color-led); }
+.leyenda-puertos i.t-fibra-l { background: #fff; box-shadow: inset 0 0 0 2px #4a7fe0; }
+.punto-estado { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--color-led); }
+.puerto-chip { border: 1px solid var(--borde); background: var(--superficie-2); cursor: pointer; }
+.puerto-chip::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--color-led); }
+
+@media (max-width: 1050px) { .controles { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 820px) {
+  .controles { grid-template-columns: 1fr; }
+  .usuario { flex-wrap: wrap; }
 }

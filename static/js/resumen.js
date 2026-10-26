@@ -25,7 +25,7 @@ async function cargarResumen() {
       `${porEstado.activo || 0} activos · ${porEstado.mantenimiento || 0} mant. · ${porEstado.inactivo || 0} inact.`),
     tarjetaKpi("evento", "t-exito", "Eventos 24 h", k.eventos_24h, `${k.mensajes_24h} mensajes (con duplicados) · ${k.eventos_1h} última hora`),
     tarjetaKpi("critico", "t-peligro", "Severidad 0-3", k.criticos_24h, "Emergency a Error en 24 h"),
-    tarjetaKpi("sospechoso", "t-violeta", "Sospechosos", k.sospechosos_24h, `${k.no_autorizados} fuente(s) no autorizada(s)`),
+    tarjetaKpi("sospechoso", "t-violeta", "Sospechosos", k.sospechosos_24h, `${k.riesgo_alto_24h} de riesgo alto · ${k.no_autorizados} fuente(s) no autorizada(s)`),
     tarjetaKpi("incidente", "t-alerta", "Incidentes activos", k.incidentes_activos, `${k.incidentes_total} registrados en total`),
     tarjetaKpi("aprobacion", "t-neutro", "Por aprobar", k.acciones_pendientes, "acciones esperando revisión humana"),
   ].join("");
@@ -59,7 +59,7 @@ async function cargarResumen() {
     const color = d.estado !== "activo" ? "gris" : d.criticos ? "rojo" : d.sospechosos ? "ambar" : "verde";
     return `<li><span class="salud ${color}"></span>
       <div><div class="titulo">${esc(d.nombre)}</div>
-      <div class="sub">${esc(d.ip)} · ${esc(d.marca)} · ${esc(d.estado)}${d.autorizado ? "" : " · NO autorizado"}</div></div>
+      <div class="sub">${esc(d.ip)} · ${esc(d.marca)} · ${esc(d.estado)}${d.simulado ? "" : " · real"}${d.autorizado ? "" : " · NO autorizado"}${d.puertos_down ? ` · ${d.puertos_down} puerto(s) abajo` : ""}</div></div>
       <div class="der">${d.eventos} eventos · ${d.criticos || 0} críticos<br>${d.ultimo ? "último " + fecha(d.ultimo) : "sin eventos"}</div></li>`;
   }).join("") || `<li class="vacio">Sin equipos en el inventario.</li>`;
 

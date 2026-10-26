@@ -1,19 +1,26 @@
-/* principal.js - Navegación entre vistas, selección de usuario y refresco automático. */
+/* principal.js - Navegación entre vistas, permisos por rol y refresco automático. */
 
 const VISTAS = {
   resumen: ["Panel general", "Estado de la red en las últimas 24 horas", cargarResumen],
   eventos: ["Eventos Syslog", "Recepción UDP, importación de archivos y simulador", cargarEventos],
   incidentes: ["Incidentes", "Creación, asignación, seguimiento y cierre", cargarIncidentes],
   acciones: ["Aprobaciones", "Acciones de respuesta con revisión humana obligatoria", cargarAcciones],
-  inventario: ["Inventario", "Equipos de red y lista permitida de fuentes Syslog", cargarInventario],
+  inventario: ["Inventario", "Equipos, puertos físicos, consola y lista permitida", cargarInventario],
   configuraciones: ["Configuraciones", "Plantillas Syslog comentadas para Cisco, Fortinet y Huawei", async () => {}],
-  consola: ["Consola", "Terminal simulada de solo lectura con comandos permitidos y bloqueados", cargarConsola],
+  consola: ["Consola", "Gestor de solo lectura: simulado o real por SSH/consola desde el servidor", cargarConsola],
   politica: ["Política IA", "Defensa frente a acciones de agentes de inteligencia artificial", cargarPolitica],
-  auditoria: ["Auditoría", "Quién hizo qué, cuándo y con qué resultado", cargarAuditoria],
+  verificacion: ["Verificación", "Políticas Syslog verificadas, hora NTP, integridad y alertas", cargarVerificacion],
+  auditoria: ["Auditoría", "Registro encadenado e inmutable: quién hizo qué y cuándo", cargarAuditoria],
+  usuarios: ["Usuarios", "Cuentas, roles y claves temporales", cargarUsuarios],
+  api: ["API", "Tokens de acceso e índice de la API REST", cargarApi],
 };
 let vistaActual = "resumen";
+let intervalos = [];
 
 function irA(vista) {
+  if (!VISTAS[vista]) vista = "resumen";
+  const boton = document.querySelector(`#menu button[data-vista="${vista}"]`);
+  if (boton && boton.hidden) vista = "resumen";       // vista no permitida para el rol
   vistaActual = vista;
   document.querySelectorAll("#menu button").forEach((b) => b.classList.toggle("activo", b.dataset.vista === vista));
   document.querySelectorAll(".vista").forEach((s) => s.classList.toggle("activa", s.id === "vista-" + vista));
@@ -25,64 +32,46 @@ function irA(vista) {
 }
 
 function aplicarRol() {
-  // Oculta los botones que el rol actual no puede usar (el backend también lo valida)
-  const escribe = puede("operador", "supervisor");
-  ["btn-nuevo-incidente", "btn-nueva-accion", "btn-nuevo-equipo", "btn-simular"].forEach((id) => {
+  // Oculta lo que el rol no puede usar. El backend valida igual: esto es solo comodidad.
+  const escribe = puede("operador");
+  ["btn-nuevo-incidente", "btn-nueva-accion", "btn-nuevo-equipo", "btn-simular", "escenario-sim"].forEach((id) => {
     document.getElementById(id).hidden = !escribe;
   });
-  document.getElementById("escenario-sim").hidden = !escribe;
   document.querySelector('label[for="archivo-syslog"]').hidden = !escribe;
+  document.querySelectorAll("[data-rol]").forEach((el) => { el.hidden = !puede(el.dataset.rol); });
 }
 
-async function iniciar() {
-  NOC.usuarios = await api("/usuarios");
-  let guardado = null;
-  try { guardado = localStorage.getItem("noc-usuario"); } catch { /* sin almacenamiento */ }
-  NOC.usuario = NOC.usuarios[guardado] ? guardado : Object.keys(NOC.usuarios)[0]; // por defecto: operador1
-  NOC.rol = NOC.usuarios[NOC.usuario];
-
-  const selector = document.getElementById("selector-usuario");
-  selector.innerHTML = Object.keys(NOC.usuarios).map((u) => `<option ${u === NOC.usuario ? "selected" : ""}>${esc(u)}</option>`).join("");
-  document.getElementById("rol-usuario").textContent = NOC.rol;
-  selector.addEventListener("change", () => {
-    NOC.usuario = selector.value;
-    NOC.rol = NOC.usuarios[NOC.usuario];
-    document.getElementById("rol-usuario").textContent = NOC.rol;
-    try { localStorage.setItem("noc-usuario", NOC.usuario); } catch { /* sin almacenamiento */ }
-    aplicarRol();
-    irA(vistaActual);
-    aviso(`Ahora trabajas como ${NOC.usuario} (${NOC.rol})`);
-  });
+/** Se llama cuando hay una sesión válida. */
+async function arrancarApp(usuario) {
+  NOC.usuario = usuario.usuario;
+  NOC.rol = usuario.rol;
+  document.getElementById("acceso").hidden = true;
+  document.getElementById("app").hidden = false;
+  document.getElementById("nombre-usuario").textContent = usuario.nombre || usuario.usuario;
+  document.getElementById("rol-usuario").textContent = usuario.rol;
   aplicarRol();
 
-  // Filtros de eventos
+  NOC.usuarios = await api("/usuarios/nombres");
   await cargarDispositivos();
   document.getElementById("filtro-equipo").innerHTML = `<option value="">Todos</option>` + opcionesEquipos();
   document.getElementById("filtro-sev").innerHTML = `<option value="">Todas</option>` +
     NOC.SEVERIDADES.map((s, i) => `<option value="${i}">${i} ${s}</option>`).join("");
 
-  document.getElementById("menu").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-vista]");
-    if (b) irA(b.dataset.vista);
-  });
-  document.body.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-ir]");
-    if (b) irA(b.dataset.ir);
-  });
-
   let inicial = "resumen";
   try { inicial = localStorage.getItem("noc-vista") || "resumen"; } catch { /* sin almacenamiento */ }
-  irA(VISTAS[inicial] ? inicial : "resumen");
+  irA(inicial);
   estadoReceptor();
 
-  // Refresco automático del panel cada 15 s
-  setInterval(() => {
-    estadoReceptor();
-    if (vistaActual === "resumen" && !document.getElementById("panel")) cargarResumen().catch(() => {});
-  }, 15000);
-  setInterval(() => {
-    document.getElementById("reloj").textContent = new Date().toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "medium" });
-  }, 1000);
+  intervalos.forEach(clearInterval);
+  intervalos = [
+    setInterval(() => {
+      estadoReceptor();
+      if (vistaActual === "resumen" && !document.getElementById("panel")) cargarResumen().catch(() => {});
+    }, 15000),
+    setInterval(() => {
+      document.getElementById("reloj").textContent = new Date().toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "medium" });
+    }, 1000),
+  ];
 }
 
 async function estadoReceptor() {
@@ -99,4 +88,14 @@ async function estadoReceptor() {
   }
 }
 
-iniciar().catch((err) => aviso(err.message, "error"));
+// --- navegación ---
+document.getElementById("menu").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-vista]");
+  if (b) irA(b.dataset.vista);
+});
+document.body.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ir]");
+  if (b) irA(b.dataset.ir);
+});
+
+iniciarAcceso();

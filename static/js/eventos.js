@@ -24,8 +24,9 @@ async function cargarEventos() {
       <td>${esc(e.facility_nombre)}</td>
       <td><div class="msg" title="${esc(e.mensaje)}">${esc(e.mensaje)}</div></td>
       <td>${e.repeticiones > 1 ? "×" + e.repeticiones : ""}</td>
+      <td>${chipRiesgo(e.riesgo)}</td>
       <td>${chipsBanderas(e.banderas)}</td>
-    </tr>`).join("") || `<tr><td colspan="9" class="vacio">No hay eventos con esos filtros.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="10" class="vacio">No hay eventos con esos filtros.</td></tr>`;
   const hasta = Math.min(desplazamiento + PAGINA, r.total);
   document.getElementById("info-paginacion").textContent =
     r.total ? `Mostrando ${desplazamiento + 1}–${hasta} de ${r.total}` : "0 eventos";
@@ -46,8 +47,10 @@ async function verEvento(id) {
       <dt>Hostname reportado</dt><dd>${esc(e.hostname || "—")}</dd>
       <dt>Marca</dt><dd>${esc(e.marca || "—")}</dd>
       <dt>Aplicación / tag</dt><dd class="mono">${esc(e.app || "—")}</dd>
-      <dt>Recibido (colector)</dt><dd>${fecha(e.recibido_en, true)}</dd>
-      <dt>Fecha del equipo</dt><dd>${fecha(e.fecha_evento, true)}</dd>
+      <dt>Recibido (colector)</dt><dd>${fecha(e.recibido_en, true)} <span class="kpi-pie">· hora confiable e inmutable</span></dd>
+      <dt>Fecha del equipo</dt><dd>${fecha(e.fecha_evento, true)}${e.desfase_s !== null && e.desfase_s !== undefined
+        ? ` <span class="kpi-pie">· desfase ${e.desfase_s} s${Math.abs(e.desfase_s) > 300 ? " ⚠ reloj del equipo no confiable" : ""}</span>` : ""}</dd>
+      <dt>Riesgo</dt><dd>${chipRiesgo(e.riesgo)} <span class="kpi-pie">de 100</span></dd>
       <dt>Repeticiones</dt><dd>${e.repeticiones} (última: ${fecha(e.ultima_vez)})</dd>
       <dt>Formato / origen</dt><dd>${esc(e.formato)} · ${esc(e.origen)}</dd>
       <dt>Política</dt><dd>${chipsBanderas(e.banderas) || "Sin observaciones"}</dd>
